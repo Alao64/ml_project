@@ -1,11 +1,12 @@
 import os
 import sys
+from src.components.data_transformation import DataTransformation
 from src.exception import CustomException
-import logging     
+import logging
 import pandas as pd
-
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
+from src.components.model_trainer import ModelTrainer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,8 +24,36 @@ class DataIngestion:
     def initiate_data_ingestion(self):
         logger.info("Entered the data ingestion method or component")
         try:
-            df = pd.read_csv(os.path.join("notebook/car_price.csv"))
-            logger.info("Read the dataset as dataframe")
+            df = pd.read_csv(os.path.join("notebook/car_price.csv"), na_values=['-', ' ', ''])
+
+            # Clean Estimated_Mileage column
+            df['Estimated_Mileage'] = df['Estimated_Mileage'].astype(str).str.replace('km', '', regex=False).str.strip()
+            df['Estimated_Mileage'] = pd.to_numeric(df['Estimated_Mileage'], errors='coerce')
+
+            # Fix typos and inconsistencies
+            df['Fuel_Type'] = df['Fuel_Type'].replace({'Petroll': 'Petrol'})
+            df['Transmission'] = df['Transmission'].replace({'AutoNamatic': 'Automatic'})
+            df['Condition'] = df['Condition'].replace({'Exc': 'Excellent', 'Excellent!': 'Excellent'})
+            df['Color'] = df['Color'].replace({'Brwn': 'Brown'})
+            df['Cruise'] = df['Cruise'].replace({'Y': 'Yes'})
+            df['Insurance'] = df['Insurance'].replace({'3rd Party': 'Third Party', 'No': 'No insurance'})
+            df['Service_History'] = df['Service_History'].replace({'Full': 'Full Service', 'Partial': 'Partial Service'})
+            df['Safety'] = df['Safety'].replace({'4': '4 stars'})
+            df['TAge'] = df['TAge'].replace({'4 years': '4', '50': '5'})
+            df['Cylinder_Numbers'] = df['Cylinder_Numbers'].replace({'3': 'three', '4': 'four', '5': 'five'})
+            # Categorize Credit_History
+            def categorize_credit(x):
+             if x < -0.01:
+                 return "Poor"
+             elif x <= 0.01:
+              return "Fair"
+             else:
+              return "Good"
+
+            df['Credit_History'] = df['Credit_History'].apply(categorize_credit)
+            #Feature Engineering
+            df['Car_Age']= 2025-df['Year']
+            logger.info("Data cleaning completed")
 
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
 
@@ -35,7 +64,7 @@ class DataIngestion:
 
             train_set.to_csv(self.ingestion_config.train_data_path, index=False, header=True)
             test_set.to_csv(self.ingestion_config.test_data_path, index=False, header=True)
-
+            
             logger.info("Ingestion of the data is completed")
 
             return (
@@ -45,7 +74,17 @@ class DataIngestion:
 
         except Exception as e:
             raise CustomException(e, sys)
-        
+
 if __name__ == "__main__":
     obj = DataIngestion()
-    obj.initiate_data_ingestion()
+    train_data, test_data = obj.initiate_data_ingestion()
+
+    data_transformation = DataTransformation()
+    train_array, test_array, preprocessor = data_transformation.initiate_data_transformation(train_data, test_data)
+
+    model_trainer = ModelTrainer()
+    r2_score, top_models = model_trainer.initiate_model_trainer(train_array, test_array)
+    print(f"\nBest Model R2 Score: {r2_score:.4f}")
+    print("\nTop 3 Models:")
+    for i, (name, score) in enumerate(top_models, 1):
+        print(f"  #{i} {name}: {score:.4f}")
