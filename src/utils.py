@@ -1,8 +1,9 @@
 import sys
 import os
 import pandas as pd
+import numpy as np
 import joblib
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score,mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV
 from src.exception import CustomException
 
@@ -22,7 +23,8 @@ def evaluate_models(X_train, y_train, X_test, y_test, models,params):
         report = {}
         for model_name, model in models.items():
             if params.get(model_name):
-              rs = RandomizedSearchCV(model,params.get(model_name, {}),n_iter=20,cv=5,scoring='r2',random_state=42,n_jobs=-1)
+              rs = RandomizedSearchCV(model,params.get(model_name, {}),n_iter=20,cv=5,
+                                      scoring={'r2': 'r2','rmse': 'neg_root_mean_squared_error'},refit='rmse',random_state=42,n_jobs=-1)
               rs.fit(X_train, y_train)
               model.set_params(**rs.best_params_)
               model.fit(X_train, y_train)
@@ -31,9 +33,9 @@ def evaluate_models(X_train, y_train, X_test, y_test, models,params):
 
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
-            train_model_score = r2_score(y_train, y_train_pred)
-            test_model_score = r2_score(y_test, y_test_pred)
-            report[model_name] = test_model_score
+            test_r2_score = r2_score(y_test, y_test_pred)
+            test_rmse_score = np.sqrt(mean_squared_error(y_test, y_test_pred))
+            report[model_name] = test_r2_score,test_rmse_score
 
         return report
     except Exception as e:

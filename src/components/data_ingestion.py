@@ -37,7 +37,7 @@ class DataIngestion:
             df['Color'] = df['Color'].replace({'Brwn': 'Brown'})
             df['Cruise'] = df['Cruise'].replace({'Y': 'Yes'})
             df['Insurance'] = df['Insurance'].replace({'3rd Party': 'Third Party', 'No': 'No insurance'})
-            df['Service_History'] = df['Service_History'].replace({'Full': 'Full Service', 'Partial': 'Partial Service'})
+            df['Service_History'] = df['Service_History'].replace({'Full ': 'Full Service', 'Partial ': 'Partial Service'})
             df['Safety'] = df['Safety'].replace({'4': '4 stars'})
             df['TAge'] = df['TAge'].replace({'4 years': '4', '50': '5'})
             df['Cylinder_Numbers'] = df['Cylinder_Numbers'].replace({'3': 'three', '4': 'four', '5': 'five'})
@@ -53,6 +53,9 @@ class DataIngestion:
             df['Credit_History'] = df['Credit_History'].apply(categorize_credit)
             #Feature Engineering
             df['Car_Age']= 2025-df['Year']
+            df['Model_Brand'] = df['Model'].str.lower().str.split().str[0]
+            df['Model_Type'] = df['Model'].str.lower().str.split().str[1]
+            df.drop(columns=['Model','Year'], inplace=True)
             logger.info("Data cleaning completed")
 
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
@@ -83,8 +86,9 @@ if __name__ == "__main__":
     train_array, test_array, preprocessor = data_transformation.initiate_data_transformation(train_data, test_data)
 
     model_trainer = ModelTrainer()
-    r2_score, top_models = model_trainer.initiate_model_trainer(train_array, test_array)
+    r2_score, rmse, top_models = model_trainer.initiate_model_trainer(train_array, test_array)
     print(f"\nBest Model R2 Score: {r2_score:.4f}")
+    print(f"Best Model RMSE: {rmse:,.2f}")
     print("\nTop 3 Models:")
-    for i, (name, score) in enumerate(top_models, 1):
-        print(f"  #{i} {name}: {score:.4f}")
+    for i, (name, (r2, rmse)) in enumerate(top_models, 1):
+        print(f" #{i} {name}: R2 = {r2:.4f} | RMSE = {rmse:,.2f}")

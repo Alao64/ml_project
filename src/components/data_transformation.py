@@ -21,10 +21,10 @@ class DataTransformation:
 
     def get_data_transformer_object(self):
         try:
-            numerical_columns = ['Year', 'DoorsNum', 'Owners', 'Warranty', 'Engine_Size', 'Weight',
+            numerical_columns = ['DoorsNum', 'Owners', 'Warranty', 'Engine_Size', 'Weight',
        'carlength', 'carwidth', 'monthly_mileage', 'peakrpm',
        'Estimated_Mileage','Car_Age']
-            categorical_columns = ['Model', 'Fuel_Type', 'Transmission', 'Condition', 'Color', 'Cruise',
+            categorical_columns = ['Model_Brand', 'Model_Type', 'Fuel_Type', 'Transmission', 'Condition', 'Color', 'Cruise',
        'Leather_Seats', 'Heated_Seats', 'Navigation', 'Insurance',
        'Service_History', 'Safety', 'Premium_Sound', 'Multimedia', 'Bluetooth',
        'Wheel', 'Sunroof', 'TAge', 'Cylinder_Numbers', 'Credit_History']

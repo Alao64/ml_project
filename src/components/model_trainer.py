@@ -1,4 +1,4 @@
-from venv import logger
+from src.logger import logger
 
 from numpy.random import randint, uniform
 import pandas as pd
@@ -35,8 +35,8 @@ class ModelTrainer:
                 "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
                 "Linear Regression": LinearRegression(),
                 "Ridge Regression": Ridge(alpha=1.0),
-                "Lasso Regression": Lasso(alpha=0.01),
-                "Elastic Net": ElasticNet(alpha=0.01),
+                "Lasso Regression": Lasso(alpha=0.01, max_iter=10000),
+                "Elastic Net": ElasticNet(alpha=0.01, max_iter=10000),
                 "XGBRegressor": XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
             }
             
@@ -58,27 +58,23 @@ class ModelTrainer:
             }
             model_report: dict = evaluate_models(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, models=models,params=params)
 
-            best_model_score = max(model_report.values())
-            sorted_models = sorted(model_report.items(), key=lambda x: x[1], reverse=True)
-            best_model_name = list(model_report.keys())[
-                list(model_report.values()).index(best_model_score)
-            ]
-
+            sorted_models = sorted(model_report.items(), key=lambda x: x[1][0], reverse=True)
+            best_model_name, (best_r2, best_rmse) = sorted_models[0]
             best_model = models[best_model_name]
 
-            if best_model_score < 0.6:
-                raise CustomException("No best model found")
-            logger.info("Top 3 models:")
-            for i, (model_name, score) in enumerate(sorted_models[:3], 1):
-                logger.info(f"#{i} {model_name}: R2 Score = {score:.4f}")
+            if best_r2 < 0.6:
+              raise CustomException("No best model found")
 
+            logging.info("Top 3 models:")
+            for i, (model_name, (r2, rmse)) in enumerate(sorted_models[:3], 1):
+                logging.info(f"#{i} {model_name}: R2 = {r2:.4f} | RMSE = {rmse:,.2f}")
             save_object(
                 file_path=self.model_trainer_config.trained_model_file_path,
                 obj=best_model
             )
-            predicted = best_model.predict(X_test)
-            r2_square = r2_score(y_test, predicted)
-            return r2_square, sorted_models[:3]
+            # ✅ Clean — reuse what you already computed
+            logging.info(f"Best Model: {best_model_name} | R2 = {best_r2:.4f} | RMSE = {best_rmse:,.2f}")
+            return best_r2, best_rmse, sorted_models[:3]
         
         except Exception as e:
             raise CustomException(e, sys)
